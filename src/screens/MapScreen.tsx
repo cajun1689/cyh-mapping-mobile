@@ -139,6 +139,32 @@ export default function MapScreen() {
     }
   }, []);
 
+  // Fit map to show all markers whenever filtered results change
+  const hasInitiallyFit = useRef(false);
+  useEffect(() => {
+    if (sortedFiltered.length === 0 || !mapRef.current) return;
+    const coords = sortedFiltered.map((l) => ({
+      latitude: l.coords[0],
+      longitude: l.coords[1],
+    }));
+    const padding = { top: insets.top + 80, bottom: 140, left: 40, right: 40 };
+    if (!hasInitiallyFit.current) {
+      // Small delay on first load so the map is fully mounted
+      setTimeout(() => {
+        mapRef.current?.fitToCoordinates(coords, {
+          edgePadding: padding,
+          animated: false,
+        });
+      }, 300);
+      hasInitiallyFit.current = true;
+    } else {
+      mapRef.current.fitToCoordinates(coords, {
+        edgePadding: padding,
+        animated: true,
+      });
+    }
+  }, [sortedFiltered, insets.top]);
+
   const getMarkerColor = useCallback((listing: FormattedListing) => {
     const parent = listing.category?.split(': ')[0] || '';
     return categoryColors[parent] || defaultCategoryColor;
