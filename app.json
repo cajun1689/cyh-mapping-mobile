@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "wyoming-resource-map",
+    "name": "WY Resource Map",
     "slug": "wyoming-resource-map",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,22 +9,35 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#1B3A4B"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "org.casperyouthhub.resourcemap",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "We use your location to find resources near you."
+      }
     },
     "android": {
+      "package": "org.casperyouthhub.resourcemap",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#1B3A4B",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-web-browser",
+      "expo-sharing",
+      "expo-location"
+    ]
   }
 }
