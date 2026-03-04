@@ -77,7 +77,10 @@ export const getCategoryCount = (
 export function formatListings(listings: Listing[]): FormattedListing[] {
   return listings.map(({ latitude, longitude, ...rest }) => ({
     ...rest,
-    coords: [latitude, longitude] as [number, number],
+    coords: [
+      typeof latitude === 'string' ? parseFloat(latitude) : Number(latitude),
+      typeof longitude === 'string' ? parseFloat(longitude) : Number(longitude),
+    ] as [number, number],
     cost: rest.cost_keywords?.length ? rest.cost_keywords : undefined,
   }));
 }
