@@ -29,6 +29,7 @@ import {
   colors,
   siteConfig,
   categoryColors,
+  categoryIcons,
   defaultCategoryColor,
 } from '../config/siteConfig';
 import ListingCard from '../components/ListingCard';
@@ -392,7 +393,7 @@ export default function MapScreen() {
         }}
         showsUserLocation={!!userLocation}
         showsMyLocationButton={false}
-        mapPadding={{ top: insets.top + 70, bottom: 140, left: 16, right: 16 }}
+        mapPadding={{ top: insets.top + 120, bottom: 140, left: 16, right: 16 }}
         radius={50}
         minZoomLevel={5}
         maxZoom={14}
@@ -451,6 +452,54 @@ export default function MapScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Category Bar */}
+      {meta?.listingCategories && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={[styles.categoryBar, { top: insets.top + 62 }]}
+          contentContainerStyle={styles.categoryBarContent}
+        >
+          {Object.keys(meta.listingCategories).map((parent) => {
+            const isActive = filters.category.startsWith(parent);
+            const catColor = categoryColors[parent] || defaultCategoryColor;
+            const iconName = (categoryIcons[parent] || 'folder-outline') as any;
+            return (
+              <TouchableOpacity
+                key={parent}
+                style={[
+                  styles.categoryPill,
+                  isActive && { backgroundColor: catColor },
+                ]}
+                activeOpacity={0.7}
+                onPress={() => {
+                  if (isActive) {
+                    setFilter('category', '');
+                  } else {
+                    setFilter('category', `${parent}:`);
+                  }
+                }}
+              >
+                <Ionicons
+                  name={iconName}
+                  size={16}
+                  color={isActive ? colors.white : catColor}
+                />
+                <Text
+                  style={[
+                    styles.categoryPillText,
+                    { color: isActive ? colors.white : colors.darkGray },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {parent}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+
       {/* Near Me button */}
       <TouchableOpacity
         style={[styles.nearMeBtn, { bottom: snapPoints[0] + 16 }]}
@@ -465,7 +514,7 @@ export default function MapScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={[styles.chipRow, { top: insets.top + 60 }]}
+          style={[styles.chipRow, { top: insets.top + 102 }]}
           contentContainerStyle={styles.chipRowContent}
         >
           {filters.city ? (
@@ -482,7 +531,7 @@ export default function MapScreen() {
           ) : null}
           {filters.category ? (
             <Chip
-              label={filters.category}
+              label={filters.category.replace(': ', ' > ')}
               onRemove={() => setFilter('category', '')}
             />
           ) : null}
@@ -664,6 +713,34 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 10,
     fontWeight: '800',
+  },
+  categoryBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  categoryBarContent: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  categoryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  categoryPillText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   nearMeBtn: {
     position: 'absolute',

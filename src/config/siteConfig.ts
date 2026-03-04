@@ -82,16 +82,17 @@ export const colors = {
 } as const;
 
 export const categoryColors: Record<string, string> = {
-  Counseling: '#4A90D9',
-  Education: '#27AE60',
-  Housing: '#E67E22',
-  Health: '#E74C3C',
-  'Basic Needs': '#8E44AD',
-  Employment: '#2C3E50',
-  Legal: '#16A085',
-  Recreation: '#F39C12',
-  'Leadership & Civic Engagement': '#D35400',
-  'Family Support': '#C0392B',
+  'Counseling': '#4A90D9',
+  'Psychiatric Care': '#9B59B6',
+  'Substance Use': '#27AE60',
+  'Crisis Services': '#E74C3C',
 };
 
 export const defaultCategoryColor = '#7F8C8D';
+
+export const categoryIcons: Record<string, string> = {
+  'Counseling': 'chatbubbles-outline',
+  'Psychiatric Care': 'medkit-outline',
+  'Substance Use': 'shield-checkmark-outline',
+  'Crisis Services': 'call-outline',
+};
