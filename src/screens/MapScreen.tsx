@@ -140,10 +140,23 @@ export default function MapScreen() {
     }
   }, []);
 
+  const validListings = useMemo(
+    () =>
+      sortedFiltered.filter(
+        (l) =>
+          l.coords &&
+          typeof l.coords[0] === 'number' &&
+          typeof l.coords[1] === 'number' &&
+          isFinite(l.coords[0]) &&
+          isFinite(l.coords[1]),
+      ),
+    [sortedFiltered],
+  );
+
   const boundingRegion = useMemo((): Region | null => {
-    if (sortedFiltered.length === 0) return null;
+    if (validListings.length === 0) return null;
     let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
-    for (const l of sortedFiltered) {
+    for (const l of validListings) {
       if (l.coords[0] < minLat) minLat = l.coords[0];
       if (l.coords[0] > maxLat) maxLat = l.coords[0];
       if (l.coords[1] < minLng) minLng = l.coords[1];
@@ -152,24 +165,38 @@ export default function MapScreen() {
     const PAD = 0.15;
     const latDelta = Math.max((maxLat - minLat) * (1 + PAD), 0.05);
     const lngDelta = Math.max((maxLng - minLng) * (1 + PAD), 0.05);
-    return {
+    const region = {
       latitude: (minLat + maxLat) / 2,
       longitude: (minLng + maxLng) / 2,
       latitudeDelta: latDelta,
       longitudeDelta: lngDelta,
     };
-  }, [sortedFiltered]);
+    if (
+      !isFinite(region.latitude) ||
+      !isFinite(region.longitude) ||
+      !isFinite(region.latitudeDelta) ||
+      !isFinite(region.longitudeDelta)
+    ) {
+      return null;
+    }
+    return region;
+  }, [validListings]);
 
   const hasInitiallyFit = useRef(false);
   useEffect(() => {
     if (!boundingRegion || !mapRef.current || !mapReady) return;
     if (!hasInitiallyFit.current) {
-      setTimeout(() => {
-        mapRef.current?.animateToRegion(boundingRegion, 0);
-      }, 400);
+      const timer = setTimeout(() => {
+        try {
+          mapRef.current?.animateToRegion(boundingRegion, 1);
+        } catch {}
+      }, 600);
       hasInitiallyFit.current = true;
+      return () => clearTimeout(timer);
     } else {
-      mapRef.current.animateToRegion(boundingRegion, 500);
+      try {
+        mapRef.current.animateToRegion(boundingRegion, 500);
+      } catch {}
     }
   }, [boundingRegion, mapReady]);
 
@@ -258,7 +285,7 @@ export default function MapScreen() {
           setSelectedGuid(null);
         }}
       >
-        {sortedFiltered.map((listing) => (
+        {validListings.map((listing) => (
           <Marker
             key={listing.guid}
             identifier={String(listing.guid)}
