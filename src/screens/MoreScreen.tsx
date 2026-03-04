@@ -39,15 +39,15 @@ const menuItems = [
     id: 'suggest',
     icon: 'create-outline',
     label: 'Suggest an Update',
-    description: 'Submit a new resource or update an existing one',
-    url: siteConfig.forms.provider,
+    description: 'Report issues or suggest changes to a listing',
+    url: siteConfig.forms.feedback,
   },
   {
-    id: 'feedback',
-    icon: 'chatbubble-outline',
-    label: 'Give Feedback',
-    description: 'Report issues or share your thoughts',
-    url: siteConfig.forms.feedback,
+    id: 'provider',
+    icon: 'add-circle-outline',
+    label: 'Add a Resource',
+    description: 'Are you a provider? Submit your organization',
+    url: siteConfig.forms.provider,
   },
 ];
 
