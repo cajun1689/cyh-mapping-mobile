@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Platform,
   Keyboard,
+  ScrollView,
 } from 'react-native';
 import MapView, { Marker, Region, PROVIDER_DEFAULT } from 'react-native-maps';
 import ClusteredMapView from 'react-native-map-clustering';
@@ -34,11 +35,110 @@ import ListingCard from '../components/ListingCard';
 import FilterSheet from '../components/FilterSheet';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const DOT_SIZE = 14;
+const DOT_SELECTED_SIZE = 20;
 
 type MapStackParamList = {
   MapMain: undefined;
   Detail: { listing: FormattedListing };
 };
+
+function MarkerDot({ color, isSelected }: { color: string; isSelected: boolean }) {
+  const size = isSelected ? DOT_SELECTED_SIZE : DOT_SIZE;
+  return (
+    <View style={[
+      markerStyles.wrapper,
+      { width: size + 8, height: size + 8 },
+    ]}>
+      {isSelected && (
+        <View style={[markerStyles.ring, { borderColor: color }]} />
+      )}
+      <View
+        style={[
+          markerStyles.dot,
+          {
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+            backgroundColor: color,
+          },
+        ]}
+      />
+    </View>
+  );
+}
+
+const markerStyles = StyleSheet.create({
+  wrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ring: {
+    position: 'absolute',
+    width: DOT_SELECTED_SIZE + 10,
+    height: DOT_SELECTED_SIZE + 10,
+    borderRadius: (DOT_SELECTED_SIZE + 10) / 2,
+    borderWidth: 2,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+  dot: {
+    borderWidth: 2,
+    borderColor: colors.white,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+});
+
+function ClusterMarker({ count, color }: { count: number; color: string }) {
+  const size = Math.min(24 + Math.log2(count) * 8, 52);
+  return (
+    <View style={[clusterStyles.outer, {
+      width: size + 6,
+      height: size + 6,
+      borderRadius: (size + 6) / 2,
+      backgroundColor: `${color}25`,
+    }]}>
+      <View style={[clusterStyles.inner, {
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: color,
+      }]}>
+        <Text style={[clusterStyles.text, {
+          fontSize: size < 32 ? 11 : 13,
+        }]}>
+          {count}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+const clusterStyles = StyleSheet.create({
+  outer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  inner: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.8)',
+  },
+  text: {
+    color: colors.white,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+});
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
@@ -63,7 +163,7 @@ export default function MapScreen() {
   const flatListRef = useRef<any>(null);
 
   const snapPoints = useMemo(
-    () => [120, SCREEN_HEIGHT * 0.5, SCREEN_HEIGHT * 0.9],
+    () => [130, SCREEN_HEIGHT * 0.45, SCREEN_HEIGHT * 0.88],
     [],
   );
 
@@ -162,9 +262,9 @@ export default function MapScreen() {
       if (l.coords[1] < minLng) minLng = l.coords[1];
       if (l.coords[1] > maxLng) maxLng = l.coords[1];
     }
-    const PAD = 0.15;
-    const latDelta = Math.max((maxLat - minLat) * (1 + PAD), 0.05);
-    const lngDelta = Math.max((maxLng - minLng) * (1 + PAD), 0.05);
+    const PAD = 0.3;
+    const latDelta = Math.max((maxLat - minLat) * (1 + PAD), 0.1);
+    const lngDelta = Math.max((maxLng - minLng) * (1 + PAD), 0.1);
     const region = {
       latitude: (minLat + maxLat) / 2,
       longitude: (minLng + maxLng) / 2,
@@ -203,6 +303,24 @@ export default function MapScreen() {
   const getMarkerColor = useCallback((listing: FormattedListing) => {
     const parent = listing.category?.split(': ')[0] || '';
     return categoryColors[parent] || defaultCategoryColor;
+  }, []);
+
+  const renderCluster = useCallback((cluster: any) => {
+    const { id, geometry, onPress, properties } = cluster;
+    const count = properties?.point_count || 0;
+    return (
+      <Marker
+        key={`cluster-${id}`}
+        coordinate={{
+          latitude: geometry.coordinates[1],
+          longitude: geometry.coordinates[0],
+        }}
+        onPress={onPress}
+        tracksViewChanges={false}
+      >
+        <ClusterMarker count={count} color={colors.navy} />
+      </Marker>
+    );
   }, []);
 
   const renderCard = useCallback(
@@ -274,11 +392,12 @@ export default function MapScreen() {
         }}
         showsUserLocation={!!userLocation}
         showsMyLocationButton={false}
-        mapPadding={{ top: insets.top + 70, bottom: 130, left: 0, right: 0 }}
-        clusterColor={colors.navy}
-        clusterTextColor={colors.white}
-        clusterFontFamily={Platform.OS === 'ios' ? 'System' : 'Roboto'}
+        mapPadding={{ top: insets.top + 70, bottom: 140, left: 16, right: 16 }}
+        radius={50}
+        minZoomLevel={5}
+        maxZoom={14}
         spiralEnabled={false}
+        renderCluster={renderCluster}
         onMapReady={() => setMapReady(true)}
         onPress={() => {
           Keyboard.dismiss();
@@ -293,9 +412,14 @@ export default function MapScreen() {
               latitude: listing.coords[0],
               longitude: listing.coords[1],
             }}
-            pinColor={getMarkerColor(listing)}
             onPress={() => handleMarkerPress(listing)}
-          />
+            tracksViewChanges={false}
+          >
+            <MarkerDot
+              color={getMarkerColor(listing)}
+              isSelected={listing.guid === selectedGuid}
+            />
+          </Marker>
         ))}
       </ClusteredMapView>
 
@@ -314,7 +438,7 @@ export default function MapScreen() {
           />
         </View>
         <TouchableOpacity
-          style={styles.filterBtn}
+          style={[styles.filterBtn, activeCount > 0 && styles.filterBtnActive]}
           onPress={() => setFilterOpen(true)}
           activeOpacity={0.7}
         >
@@ -333,12 +457,17 @@ export default function MapScreen() {
         onPress={handleNearMe}
         activeOpacity={0.8}
       >
-        <Ionicons name="navigate" size={22} color={colors.navy} />
+        <Ionicons name="navigate" size={20} color={colors.navy} />
       </TouchableOpacity>
 
       {/* Active filter chips */}
       {activeCount > 0 && (
-        <View style={[styles.chipRow, { top: insets.top + 62 }]}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={[styles.chipRow, { top: insets.top + 60 }]}
+          contentContainerStyle={styles.chipRowContent}
+        >
           {filters.city ? (
             <Chip label={filters.city} onRemove={() => setFilter('city', '')} />
           ) : null}
@@ -369,7 +498,7 @@ export default function MapScreen() {
               onRemove={() => setFilter('hideFaithBased', false)}
             />
           ) : null}
-        </View>
+        </ScrollView>
       )}
 
       {/* Bottom Sheet */}
@@ -431,7 +560,7 @@ function Chip({
         {label}
       </Text>
       <TouchableOpacity onPress={onRemove} hitSlop={8}>
-        <Ionicons name="close-circle" size={16} color={colors.navy} />
+        <Ionicons name="close-circle" size={14} color={colors.navy} />
       </TouchableOpacity>
     </View>
   );
@@ -474,11 +603,11 @@ const styles = StyleSheet.create({
   },
   toolbar: {
     position: 'absolute',
-    left: 12,
-    right: 12,
+    left: 16,
+    right: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     zIndex: 10,
   },
   searchContainer: {
@@ -486,84 +615,94 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.white,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 44,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    height: 46,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
     elevation: 4,
   },
   searchInput: {
     flex: 1,
     marginLeft: 8,
-    fontSize: 15,
+    fontSize: 16,
     color: colors.darkGray,
-    height: 44,
+    height: 46,
   },
   filterBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 46,
+    height: 46,
+    borderRadius: 14,
     backgroundColor: colors.navy,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
     elevation: 4,
+  },
+  filterBtnActive: {
+    backgroundColor: '#2a5670',
   },
   badge: {
     position: 'absolute',
-    top: -4,
-    right: -4,
+    top: -5,
+    right: -5,
     backgroundColor: colors.danger,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.white,
   },
   badgeText: {
     color: colors.white,
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '800',
   },
   nearMeBtn: {
     position: 'absolute',
     right: 16,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
     elevation: 4,
   },
   chipRow: {
     position: 'absolute',
-    left: 12,
-    right: 12,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
+    left: 0,
+    right: 0,
     zIndex: 10,
+  },
+  chipRowContent: {
+    paddingHorizontal: 16,
+    gap: 6,
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.95)',
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 16,
+    paddingVertical: 6,
+    borderRadius: 20,
     gap: 4,
-    maxWidth: 160,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   chipText: {
     fontSize: 12,
@@ -571,29 +710,37 @@ const styles = StyleSheet.create({
     color: colors.navy,
   },
   sheetBg: {
-    backgroundColor: colors.offWhite,
+    backgroundColor: colors.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 8,
   },
   sheetHandle: {
     alignItems: 'center',
-    paddingTop: 8,
-    paddingBottom: 8,
+    paddingTop: 10,
+    paddingBottom: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.lightGray,
   },
   handleBar: {
     width: 36,
     height: 4,
     borderRadius: 2,
     backgroundColor: colors.lightGray,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   resultCount: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.darkGray,
+    color: colors.mediumGray,
+    letterSpacing: 0.2,
   },
   listContent: {
-    paddingTop: 4,
+    paddingTop: 8,
     paddingBottom: 40,
   },
   emptyList: {

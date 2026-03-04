@@ -34,23 +34,22 @@ export default function ListingCard({
     <TouchableOpacity
       activeOpacity={0.7}
       onPress={onPress}
-      style={[
-        styles.card,
-        isSelected && styles.cardSelected,
-        { borderLeftColor: accentColor },
-      ]}
+      style={[styles.card, isSelected && { borderLeftColor: accentColor, borderLeftWidth: 3 }]}
     >
-      <View style={styles.header}>
-        <View style={styles.categoryBadge}>
-          <Text style={[styles.categoryText, { color: accentColor }]}>
-            {parentCategory}
-          </Text>
-        </View>
+      <View style={styles.topRow}>
+        <View style={[styles.categoryDot, { backgroundColor: accentColor }]} />
+        <Text style={styles.categoryLabel} numberOfLines={1}>
+          {parentCategory || 'Resource'}
+        </Text>
+        <View style={styles.spacer} />
+        {distance !== undefined && (
+          <Text style={styles.distanceText}>{distance.toFixed(1)} mi</Text>
+        )}
         <Pressable onPress={onToggleSave} hitSlop={12} style={styles.saveBtn}>
           <Ionicons
             name={isSaved ? 'heart' : 'heart-outline'}
-            size={22}
-            color={isSaved ? colors.danger : colors.mediumGray}
+            size={20}
+            color={isSaved ? colors.danger : colors.lightGray}
           />
         </Pressable>
       </View>
@@ -59,27 +58,10 @@ export default function ListingCard({
         {listing.full_name}
       </Text>
 
-      {listing.full_address ? (
-        <View style={styles.row}>
-          <Ionicons name="location-outline" size={14} color={colors.mediumGray} />
-          <Text style={styles.detail} numberOfLines={1}>
-            {listing.full_address}
-          </Text>
-        </View>
-      ) : null}
-
-      {listing.phone_1 ? (
-        <View style={styles.row}>
-          <Ionicons name="call-outline" size={14} color={colors.mediumGray} />
-          <Text style={styles.detail}>{listing.phone_1}</Text>
-        </View>
-      ) : null}
-
-      {distance !== undefined ? (
-        <View style={styles.row}>
-          <Ionicons name="navigate-outline" size={14} color={colors.mediumGray} />
-          <Text style={styles.detail}>{distance.toFixed(1)} mi away</Text>
-        </View>
+      {(listing.full_address || listing.city) ? (
+        <Text style={styles.subtitle} numberOfLines={1}>
+          {listing.full_address || listing.city}
+        </Text>
       ) : null}
     </TouchableOpacity>
   );
@@ -88,61 +70,59 @@ export default function ListingCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.white,
-    borderRadius: 12,
     marginHorizontal: 16,
-    marginBottom: 10,
-    padding: 14,
-    borderLeftWidth: 4,
-    borderLeftColor: defaultCategoryColor,
+    marginBottom: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: 'transparent',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  cardSelected: {
-    borderLeftWidth: 4,
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  header: {
+  topRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
-  categoryBadge: {
-    backgroundColor: '#F0F4F8',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+  categoryDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
   },
-  categoryText: {
+  categoryLabel: {
     fontSize: 11,
     fontWeight: '600',
+    color: colors.mediumGray,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  spacer: {
+    flex: 1,
+  },
+  distanceText: {
+    fontSize: 12,
+    color: colors.mediumGray,
+    marginRight: 8,
+    fontWeight: '500',
+  },
   saveBtn: {
-    padding: 4,
+    padding: 2,
   },
   name: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '600',
     color: colors.darkGray,
-    marginBottom: 6,
-    lineHeight: 21,
+    lineHeight: 20,
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 3,
-  },
-  detail: {
+  subtitle: {
     fontSize: 13,
     color: colors.mediumGray,
-    flex: 1,
+    marginTop: 2,
+    lineHeight: 17,
   },
 });
