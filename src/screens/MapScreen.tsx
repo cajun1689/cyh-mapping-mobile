@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Svg, { Circle as SvgCircle } from 'react-native-svg';
 
 import { FormattedListing } from '../types';
 import { useListings } from '../hooks/useListings';
@@ -93,50 +94,79 @@ const markerStyles = StyleSheet.create({
   },
 });
 
-function ClusterMarker({ count, color }: { count: number; color: string }) {
-  const size = Math.min(24 + Math.log2(count) * 8, 52);
+interface CategorySlice {
+  color: string;
+  count: number;
+}
+
+function DonutCluster({ count, slices }: { count: number; slices: CategorySlice[] }) {
+  const size = Math.min(28 + Math.log2(count) * 8, 56);
+  const strokeWidth = 5;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const center = size / 2;
+  const total = slices.reduce((sum, s) => sum + s.count, 0) || 1;
+
+  let offset = 0;
+
   return (
-    <View style={[clusterStyles.outer, {
-      width: size + 6,
-      height: size + 6,
-      borderRadius: (size + 6) / 2,
-      backgroundColor: `${color}25`,
-    }]}>
-      <View style={[clusterStyles.inner, {
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: color,
-      }]}>
-        <Text style={[clusterStyles.text, {
-          fontSize: size < 32 ? 11 : 13,
-        }]}>
-          {count}
-        </Text>
+    <View style={[clusterStyles.wrapper, { width: size + 4, height: size + 4 }]}>
+      <View style={clusterStyles.shadow}>
+        <Svg width={size} height={size}>
+          <SvgCircle
+            cx={center}
+            cy={center}
+            r={radius}
+            fill={colors.white}
+            stroke={colors.lightGray}
+            strokeWidth={0.5}
+          />
+          {slices.map((slice, i) => {
+            const segLen = (slice.count / total) * circumference;
+            const dashOffset = -offset;
+            offset += segLen;
+            return (
+              <SvgCircle
+                key={i}
+                cx={center}
+                cy={center}
+                r={radius}
+                fill="none"
+                stroke={slice.color}
+                strokeWidth={strokeWidth}
+                strokeDasharray={`${segLen} ${circumference - segLen}`}
+                strokeDashoffset={dashOffset}
+                strokeLinecap="butt"
+                rotation={-90}
+                origin={`${center}, ${center}`}
+              />
+            );
+          })}
+        </Svg>
       </View>
+      <Text style={[clusterStyles.text, { fontSize: size < 36 ? 11 : 13 }]}>
+        {count}
+      </Text>
     </View>
   );
 }
 
 const clusterStyles = StyleSheet.create({
-  outer: {
+  wrapper: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  shadow: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  inner: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.8)',
+    shadowRadius: 4,
+    elevation: 4,
   },
   text: {
-    color: colors.white,
-    fontWeight: '700',
+    position: 'absolute',
+    fontWeight: '800',
+    color: colors.darkGray,
     textAlign: 'center',
   },
 });
@@ -162,6 +192,7 @@ export default function MapScreen() {
   const mapRef = useRef<MapView>(null);
   const sheetRef = useRef<BottomSheet>(null);
   const flatListRef = useRef<any>(null);
+  const superClusterRef = useRef<any>(null);
 
   const snapPoints = useMemo(
     () => [130, SCREEN_HEIGHT * 0.45, SCREEN_HEIGHT * 0.88],
@@ -309,6 +340,32 @@ export default function MapScreen() {
   const renderCluster = useCallback((cluster: any) => {
     const { id, geometry, onPress, properties } = cluster;
     const count = properties?.point_count || 0;
+    const clusterId = properties?.cluster_id;
+
+    let slices: CategorySlice[] = [];
+    try {
+      if (superClusterRef.current && clusterId !== undefined) {
+        const leaves = superClusterRef.current.getLeaves(clusterId, Infinity);
+        const catCounts: Record<string, number> = {};
+        for (const leaf of leaves) {
+          const idx = leaf.properties?.index;
+          if (idx !== undefined && validListings[idx]) {
+            const parent = validListings[idx].category?.split(': ')[0] || '';
+            const color = categoryColors[parent] || defaultCategoryColor;
+            catCounts[color] = (catCounts[color] || 0) + 1;
+          }
+        }
+        slices = Object.entries(catCounts).map(([color, cnt]) => ({
+          color,
+          count: cnt,
+        }));
+      }
+    } catch {}
+
+    if (slices.length === 0) {
+      slices = [{ color: colors.navy, count: 1 }];
+    }
+
     return (
       <Marker
         key={`cluster-${id}`}
@@ -319,10 +376,10 @@ export default function MapScreen() {
         onPress={onPress}
         tracksViewChanges={false}
       >
-        <ClusterMarker count={count} color={colors.navy} />
+        <DonutCluster count={count} slices={slices} />
       </Marker>
     );
-  }, []);
+  }, [validListings]);
 
   const renderCard = useCallback(
     ({ item }: { item: FormattedListing }) => {
@@ -399,6 +456,7 @@ export default function MapScreen() {
         maxZoom={14}
         spiralEnabled={false}
         renderCluster={renderCluster}
+        superClusterRef={superClusterRef}
         onMapReady={() => setMapReady(true)}
         onPress={() => {
           Keyboard.dismiss();
