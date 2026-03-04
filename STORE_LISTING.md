@@ -14,12 +14,10 @@ Find youth-serving resources across Wyoming for ages 11-20.
 The Wyoming Youth Resource Map helps young people ages 11-20 and their allies connect to youth-serving resources, organizations, and leadership opportunities across Wyoming.
 
 **What you can find:**
-- Health and mental healthcare services
-- Housing and basic needs assistance
-- Education and employment resources
-- Counseling and family support
-- Recreation and leadership opportunities
-- And much more
+- Counseling — individual providers and offices
+- Psychiatric care and medication management
+- Substance use treatment and prevention
+- Crisis services and suicide prevention hotlines
 
 **Features:**
 - Interactive map with 50+ organizations across Wyoming
