@@ -36,18 +36,18 @@ const menuItems = [
     screen: 'Resources' as const,
   },
   {
-    id: 'provider',
-    icon: 'add-circle-outline',
-    label: 'Provider Submission Form',
-    description: 'Are you a provider that wants your organization or resource listed?',
-    url: siteConfig.forms.provider,
-  },
-  {
     id: 'feedback',
     icon: 'chatbubble-outline',
     label: 'Give Feedback',
     description: 'Report issues or share your thoughts',
     url: siteConfig.forms.feedback,
+  },
+  {
+    id: 'provider',
+    icon: 'add-circle-outline',
+    label: 'Provider Submission Form',
+    description: 'Are you a provider that wants your organization or resource listed?',
+    url: siteConfig.forms.provider,
   },
 ];
 
