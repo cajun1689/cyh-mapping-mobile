@@ -56,6 +56,7 @@ export default function MapScreen() {
     longitude: number;
   } | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
 
   const mapRef = useRef<MapView>(null);
   const sheetRef = useRef<BottomSheet>(null);
@@ -139,31 +140,38 @@ export default function MapScreen() {
     }
   }, []);
 
-  // Fit map to show all markers whenever filtered results change
+  const boundingRegion = useMemo((): Region | null => {
+    if (sortedFiltered.length === 0) return null;
+    let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
+    for (const l of sortedFiltered) {
+      if (l.coords[0] < minLat) minLat = l.coords[0];
+      if (l.coords[0] > maxLat) maxLat = l.coords[0];
+      if (l.coords[1] < minLng) minLng = l.coords[1];
+      if (l.coords[1] > maxLng) maxLng = l.coords[1];
+    }
+    const PAD = 0.15;
+    const latDelta = Math.max((maxLat - minLat) * (1 + PAD), 0.05);
+    const lngDelta = Math.max((maxLng - minLng) * (1 + PAD), 0.05);
+    return {
+      latitude: (minLat + maxLat) / 2,
+      longitude: (minLng + maxLng) / 2,
+      latitudeDelta: latDelta,
+      longitudeDelta: lngDelta,
+    };
+  }, [sortedFiltered]);
+
   const hasInitiallyFit = useRef(false);
   useEffect(() => {
-    if (sortedFiltered.length === 0 || !mapRef.current) return;
-    const coords = sortedFiltered.map((l) => ({
-      latitude: l.coords[0],
-      longitude: l.coords[1],
-    }));
-    const padding = { top: insets.top + 80, bottom: 140, left: 40, right: 40 };
+    if (!boundingRegion || !mapRef.current || !mapReady) return;
     if (!hasInitiallyFit.current) {
-      // Small delay on first load so the map is fully mounted
       setTimeout(() => {
-        mapRef.current?.fitToCoordinates(coords, {
-          edgePadding: padding,
-          animated: false,
-        });
-      }, 300);
+        mapRef.current?.animateToRegion(boundingRegion, 0);
+      }, 400);
       hasInitiallyFit.current = true;
     } else {
-      mapRef.current.fitToCoordinates(coords, {
-        edgePadding: padding,
-        animated: true,
-      });
+      mapRef.current.animateToRegion(boundingRegion, 500);
     }
-  }, [sortedFiltered, insets.top]);
+  }, [boundingRegion, mapReady]);
 
   const getMarkerColor = useCallback((listing: FormattedListing) => {
     const parent = listing.category?.split(': ')[0] || '';
@@ -244,6 +252,7 @@ export default function MapScreen() {
         clusterTextColor={colors.white}
         clusterFontFamily={Platform.OS === 'ios' ? 'System' : 'Roboto'}
         spiralEnabled={false}
+        onMapReady={() => setMapReady(true)}
         onPress={() => {
           Keyboard.dismiss();
           setSelectedGuid(null);
