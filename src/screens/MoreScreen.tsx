@@ -12,7 +12,8 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as WebBrowser from 'expo-web-browser';
 
-import { colors, siteConfig } from '../config/siteConfig';
+import { siteConfig } from '../config/siteConfig';
+import { useTheme } from '../hooks/useTheme';
 
 type MoreStackParamList = {
   MoreMenu: undefined;
@@ -55,6 +56,7 @@ export default function MoreMenuScreen() {
   const insets = useSafeAreaInsets();
   const navigation =
     useNavigation<NativeStackNavigationProp<MoreStackParamList>>();
+  const { colors } = useTheme();
 
   const handlePress = useCallback(
     (item: (typeof menuItems)[number]) => {
@@ -68,39 +70,42 @@ export default function MoreMenuScreen() {
   );
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Text style={styles.title}>More</Text>
+    <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <Text style={[styles.title, { color: colors.text }]} accessibilityRole="header">More</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.list}>
         {menuItems.map((item) => (
           <TouchableOpacity
             key={item.id}
-            style={styles.menuItem}
+            style={[styles.menuItem, { backgroundColor: colors.surface }]}
             activeOpacity={0.6}
             onPress={() => handlePress(item)}
+            accessibilityRole="button"
+            accessibilityLabel={item.label}
+            accessibilityHint={item.description}
           >
-            <View style={styles.iconContainer}>
+            <View style={[styles.iconContainer, { backgroundColor: colors.surfaceSecondary }]}>
               <Ionicons name={item.icon as any} size={24} color={colors.navy} />
             </View>
             <View style={styles.menuText}>
-              <Text style={styles.menuLabel}>{item.label}</Text>
-              <Text style={styles.menuDesc}>{item.description}</Text>
+              <Text style={[styles.menuLabel, { color: colors.text }]} maxFontSizeMultiplier={1.4}>{item.label}</Text>
+              <Text style={[styles.menuDesc, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.3}>{item.description}</Text>
             </View>
             <Ionicons
               name="chevron-forward"
               size={20}
-              color={colors.lightGray}
+              color={colors.border}
+              importantForAccessibility="no"
             />
           </TouchableOpacity>
         ))}
 
-        {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerOrg}>{siteConfig.organizationName}</Text>
-          <Text style={styles.footerText}>{siteConfig.disclaimer}</Text>
-          <Text style={styles.footerVersion}>v1.0.0</Text>
+          <Text style={[styles.footerOrg, { color: colors.navy }]}>{siteConfig.organizationName}</Text>
+          <Text style={[styles.footerText, { color: colors.textTertiary }]}>{siteConfig.disclaimer}</Text>
+          <Text style={[styles.footerVersion, { color: colors.border }]}>v1.0.0</Text>
         </View>
       </ScrollView>
     </View>
@@ -110,19 +115,15 @@ export default function MoreMenuScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.offWhite,
   },
   header: {
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: colors.lightGray,
   },
   title: {
     fontSize: 22,
     fontWeight: '800',
-    color: colors.darkGray,
   },
   list: {
     paddingTop: 16,
@@ -131,7 +132,6 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
     borderRadius: 14,
     padding: 16,
     marginBottom: 10,
@@ -145,7 +145,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: colors.offWhite,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -156,11 +155,9 @@ const styles = StyleSheet.create({
   menuLabel: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.darkGray,
   },
   menuDesc: {
     fontSize: 13,
-    color: colors.mediumGray,
     marginTop: 2,
   },
   footer: {
@@ -172,18 +169,15 @@ const styles = StyleSheet.create({
   footerOrg: {
     fontSize: 14,
     fontWeight: '700',
-    color: colors.navy,
     marginBottom: 8,
   },
   footerText: {
     fontSize: 12,
-    color: colors.mediumGray,
     textAlign: 'center',
     lineHeight: 18,
   },
   footerVersion: {
     fontSize: 12,
-    color: colors.lightGray,
     marginTop: 12,
   },
 });

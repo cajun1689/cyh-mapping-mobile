@@ -8,7 +8,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FormattedListing } from '../types';
-import { colors, categoryColors, defaultCategoryColor } from '../config/siteConfig';
+import { categoryColors, defaultCategoryColor } from '../config/siteConfig';
+import { useTheme } from '../hooks/useTheme';
 
 interface Props {
   listing: FormattedListing;
@@ -27,39 +28,81 @@ export default function ListingCard({
   onToggleSave,
   distance,
 }: Props) {
+  const { colors } = useTheme();
   const parentCategory = listing.category?.split(': ')[0] || '';
   const accentColor = categoryColors[parentCategory] || defaultCategoryColor;
+
+  const a11yLabel = [
+    listing.full_name,
+    parentCategory,
+    listing.full_address || listing.city,
+    distance !== undefined ? `${distance.toFixed(1)} miles away` : '',
+    isSaved ? 'Saved' : '',
+  ].filter(Boolean).join('. ');
 
   return (
     <TouchableOpacity
       activeOpacity={0.7}
       onPress={onPress}
-      style={[styles.card, isSelected && { borderLeftColor: accentColor, borderLeftWidth: 3 }]}
+      accessibilityRole="button"
+      accessibilityLabel={a11yLabel}
+      accessibilityHint="Opens resource details"
+      style={[
+        styles.card,
+        { backgroundColor: colors.surface },
+        isSelected && { borderLeftColor: accentColor, borderLeftWidth: 3 },
+      ]}
     >
       <View style={styles.topRow}>
-        <View style={[styles.categoryDot, { backgroundColor: accentColor }]} />
-        <Text style={styles.categoryLabel} numberOfLines={1}>
+        <View
+          style={[styles.categoryDot, { backgroundColor: accentColor }]}
+          accessibilityElementsHidden
+        />
+        <Text
+          style={[styles.categoryLabel, { color: colors.textTertiary }]}
+          numberOfLines={1}
+          maxFontSizeMultiplier={1.4}
+        >
           {parentCategory || 'Resource'}
         </Text>
         <View style={styles.spacer} />
         {distance !== undefined && (
-          <Text style={styles.distanceText}>{distance.toFixed(1)} mi</Text>
+          <Text
+            style={[styles.distanceText, { color: colors.textTertiary }]}
+            maxFontSizeMultiplier={1.4}
+          >
+            {distance.toFixed(1)} mi
+          </Text>
         )}
-        <Pressable onPress={onToggleSave} hitSlop={12} style={styles.saveBtn}>
+        <Pressable
+          onPress={onToggleSave}
+          hitSlop={12}
+          style={styles.saveBtn}
+          accessibilityRole="button"
+          accessibilityLabel={isSaved ? 'Remove from saved' : 'Save resource'}
+        >
           <Ionicons
             name={isSaved ? 'heart' : 'heart-outline'}
             size={20}
-            color={isSaved ? colors.danger : colors.lightGray}
+            color={isSaved ? colors.danger : colors.border}
           />
         </Pressable>
       </View>
 
-      <Text style={styles.name} numberOfLines={2}>
+      <Text
+        style={[styles.name, { color: colors.text }]}
+        numberOfLines={2}
+        maxFontSizeMultiplier={1.5}
+      >
         {listing.full_name}
       </Text>
 
       {(listing.full_address || listing.city) ? (
-        <Text style={styles.subtitle} numberOfLines={1}>
+        <Text
+          style={[styles.subtitle, { color: colors.textSecondary }]}
+          numberOfLines={1}
+          maxFontSizeMultiplier={1.4}
+        >
           {listing.full_address || listing.city}
         </Text>
       ) : null}
@@ -69,7 +112,6 @@ export default function ListingCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.white,
     marginHorizontal: 16,
     marginBottom: 8,
     paddingVertical: 12,
@@ -97,7 +139,6 @@ const styles = StyleSheet.create({
   categoryLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: colors.mediumGray,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -106,7 +147,6 @@ const styles = StyleSheet.create({
   },
   distanceText: {
     fontSize: 12,
-    color: colors.mediumGray,
     marginRight: 8,
     fontWeight: '500',
   },
@@ -116,12 +156,10 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 15,
     fontWeight: '600',
-    color: colors.darkGray,
     lineHeight: 20,
   },
   subtitle: {
     fontSize: 13,
-    color: colors.mediumGray,
     marginTop: 2,
     lineHeight: 17,
   },

@@ -25,6 +25,7 @@ import { FormattedListing } from '../types';
 import { useListings } from '../hooks/useListings';
 import { useFilters } from '../hooks/useFilters';
 import { useSaved } from '../hooks/useSaved';
+import { useTheme } from '../hooks/useTheme';
 import { getDistance } from '../utils/filters';
 import {
   colors,
@@ -175,6 +176,8 @@ export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const navigation =
     useNavigation<NativeStackNavigationProp<MapStackParamList>>();
+  const { colors: tc, isDark, reducedMotion } = useTheme();
+  const animDuration = reducedMotion ? 1 : 500;
 
   const { listings, rawListings, meta, loading, error, refresh } = useListings();
   const { filters, setFilter, clearFilters, activeCount, filtered } =
@@ -240,7 +243,7 @@ export default function MapScreen() {
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         },
-        400,
+        reducedMotion ? 1 : 400,
       );
       navigation.navigate('Detail', { listing });
     },
@@ -265,7 +268,7 @@ export default function MapScreen() {
           latitudeDelta: 0.3,
           longitudeDelta: 0.3,
         },
-        600,
+        reducedMotion ? 1 : 600,
       );
     } catch {
       // location unavailable
@@ -327,7 +330,7 @@ export default function MapScreen() {
       return () => clearTimeout(timer);
     } else {
       try {
-        mapRef.current.animateToRegion(boundingRegion, 500);
+        mapRef.current.animateToRegion(boundingRegion, animDuration);
       } catch {}
     }
   }, [boundingRegion, mapReady]);
@@ -407,31 +410,36 @@ export default function MapScreen() {
 
   const renderHandle = useCallback(
     () => (
-      <View style={styles.sheetHandle}>
-        <View style={styles.handleBar} />
-        <Text style={styles.resultCount}>
+      <View style={[styles.sheetHandle, { borderBottomColor: tc.border }]}>
+        <View style={[styles.handleBar, { backgroundColor: tc.border }]} />
+        <Text
+          style={[styles.resultCount, { color: tc.textTertiary }]}
+          accessibilityRole="header"
+          accessibilityLabel={`${sortedFiltered.length} result${sortedFiltered.length !== 1 ? 's' : ''}`}
+          maxFontSizeMultiplier={1.3}
+        >
           {sortedFiltered.length} result{sortedFiltered.length !== 1 ? 's' : ''}
         </Text>
       </View>
     ),
-    [sortedFiltered.length],
+    [sortedFiltered.length, tc],
   );
 
   if (loading && listings.length === 0) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.navy} />
-        <Text style={styles.loadingText}>Loading resources...</Text>
+      <View style={[styles.center, { backgroundColor: tc.background }]}>
+        <ActivityIndicator size="large" color={tc.navy} />
+        <Text style={[styles.loadingText, { color: tc.textTertiary }]}>Loading resources...</Text>
       </View>
     );
   }
 
   if (error && listings.length === 0) {
     return (
-      <View style={styles.center}>
-        <Ionicons name="cloud-offline-outline" size={48} color={colors.mediumGray} />
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={refresh}>
+      <View style={[styles.center, { backgroundColor: tc.background }]}>
+        <Ionicons name="cloud-offline-outline" size={48} color={tc.textTertiary} />
+        <Text style={[styles.errorText, { color: tc.textTertiary }]}>{error}</Text>
+        <TouchableOpacity style={[styles.retryBtn, { backgroundColor: tc.navy }]} onPress={refresh} accessibilityRole="button" accessibilityLabel="Try again">
           <Text style={styles.retryText}>Try Again</Text>
         </TouchableOpacity>
       </View>
@@ -484,27 +492,32 @@ export default function MapScreen() {
 
       {/* Floating Toolbar */}
       <View style={[styles.toolbar, { top: insets.top + 8 }]}>
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={18} color={colors.mediumGray} />
+        <View style={[styles.searchContainer, { backgroundColor: tc.surface }]}>
+          <Ionicons name="search" size={18} color={tc.textTertiary} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: tc.text }]}
             placeholder="Search resources..."
-            placeholderTextColor={colors.mediumGray}
+            placeholderTextColor={tc.textTertiary}
             value={filters.search}
             onChangeText={(t) => setFilter('search', t)}
             returnKeyType="search"
             clearButtonMode="while-editing"
+            accessibilityLabel="Search resources"
+            accessibilityHint="Type to filter resources by name or keyword"
           />
         </View>
         <TouchableOpacity
-          style={[styles.filterBtn, activeCount > 0 && styles.filterBtnActive]}
+          style={[styles.filterBtn, { backgroundColor: tc.navy }, activeCount > 0 && styles.filterBtnActive]}
           onPress={() => setFilterOpen(true)}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={`Filters${activeCount > 0 ? `, ${activeCount} active` : ''}`}
+          accessibilityHint="Opens filter options"
         >
-          <Ionicons name="options-outline" size={22} color={colors.white} />
+          <Ionicons name="options-outline" size={22} color="#FFFFFF" />
           {activeCount > 0 && (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{activeCount}</Text>
+              <Text style={styles.badgeText} accessibilityElementsHidden>{activeCount}</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -527,7 +540,7 @@ export default function MapScreen() {
                 key={parent}
                 style={[
                   styles.categoryPill,
-                  isActive && { backgroundColor: catColor },
+                  { backgroundColor: isActive ? catColor : tc.mapOverlay },
                 ]}
                 activeOpacity={0.7}
                 onPress={() => {
@@ -537,18 +550,23 @@ export default function MapScreen() {
                     setFilter('category', `${parent}:`);
                   }
                 }}
+                accessibilityRole="button"
+                accessibilityLabel={`${parent} category`}
+                accessibilityState={{ selected: isActive }}
+                accessibilityHint={isActive ? 'Tap to remove filter' : 'Tap to filter by this category'}
               >
                 <Ionicons
                   name={iconName}
                   size={16}
-                  color={isActive ? colors.white : catColor}
+                  color={isActive ? '#FFFFFF' : catColor}
                 />
                 <Text
                   style={[
                     styles.categoryPillText,
-                    { color: isActive ? colors.white : colors.darkGray },
+                    { color: isActive ? '#FFFFFF' : tc.text },
                   ]}
                   numberOfLines={1}
+                  maxFontSizeMultiplier={1.3}
                 >
                   {parent}
                 </Text>
@@ -560,11 +578,14 @@ export default function MapScreen() {
 
       {/* Near Me button */}
       <TouchableOpacity
-        style={[styles.nearMeBtn, { bottom: snapPoints[0] + 16 }]}
+        style={[styles.nearMeBtn, { bottom: snapPoints[0] + 16, backgroundColor: tc.surface }]}
         onPress={handleNearMe}
         activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel="Near me"
+        accessibilityHint="Uses your location to sort resources by distance"
       >
-        <Ionicons name="navigate" size={20} color={colors.navy} />
+        <Ionicons name="navigate" size={20} color={tc.navy} />
       </TouchableOpacity>
 
       {/* Active filter chips */}
@@ -614,7 +635,7 @@ export default function MapScreen() {
         index={0}
         snapPoints={snapPoints}
         handleComponent={renderHandle}
-        backgroundStyle={styles.sheetBg}
+        backgroundStyle={[styles.sheetBg, { backgroundColor: tc.sheetBg }]}
         enablePanDownToClose={false}
       >
         <BottomSheetFlatList
@@ -661,13 +682,18 @@ function Chip({
   label: string;
   onRemove: () => void;
 }) {
+  const { colors: tc } = useTheme();
   return (
-    <View style={styles.chip}>
-      <Text style={styles.chipText} numberOfLines={1}>
+    <View
+      style={[styles.chip, { backgroundColor: tc.chipBg }]}
+      accessibilityRole="button"
+      accessibilityLabel={`Active filter: ${label}. Double tap to remove.`}
+    >
+      <Text style={[styles.chipText, { color: tc.navy }]} numberOfLines={1} maxFontSizeMultiplier={1.3}>
         {label}
       </Text>
-      <TouchableOpacity onPress={onRemove} hitSlop={8}>
-        <Ionicons name="close-circle" size={14} color={colors.navy} />
+      <TouchableOpacity onPress={onRemove} hitSlop={8} accessibilityLabel={`Remove ${label} filter`}>
+        <Ionicons name="close-circle" size={14} color={tc.navy} />
       </TouchableOpacity>
     </View>
   );

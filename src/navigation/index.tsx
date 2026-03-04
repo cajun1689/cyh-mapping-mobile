@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,7 +10,7 @@ import SavedScreen from '../screens/SavedScreen';
 import MoreMenuScreen from '../screens/MoreScreen';
 import AboutScreen from '../screens/AboutScreen';
 import ResourcesScreen from '../screens/ResourcesScreen';
-import { colors } from '../config/siteConfig';
+import { useTheme } from '../hooks/useTheme';
 
 const MapStack = createNativeStackNavigator();
 const SavedStack = createNativeStackNavigator();
@@ -18,6 +18,7 @@ const MoreStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 function MapStackScreen() {
+  const { colors } = useTheme();
   return (
     <MapStack.Navigator>
       <MapStack.Screen
@@ -30,7 +31,7 @@ function MapStackScreen() {
         component={DetailScreen}
         options={({ route }: any) => ({
           title: route.params?.listing?.full_name || 'Details',
-          headerStyle: { backgroundColor: colors.white },
+          headerStyle: { backgroundColor: colors.surface },
           headerTintColor: colors.navy,
           headerTitleStyle: { fontWeight: '600', fontSize: 16 },
           headerBackTitle: 'Map',
@@ -41,6 +42,7 @@ function MapStackScreen() {
 }
 
 function SavedStackScreen() {
+  const { colors } = useTheme();
   return (
     <SavedStack.Navigator>
       <SavedStack.Screen
@@ -53,7 +55,7 @@ function SavedStackScreen() {
         component={DetailScreen}
         options={({ route }: any) => ({
           title: route.params?.listing?.full_name || 'Details',
-          headerStyle: { backgroundColor: colors.white },
+          headerStyle: { backgroundColor: colors.surface },
           headerTintColor: colors.navy,
           headerTitleStyle: { fontWeight: '600', fontSize: 16 },
           headerBackTitle: 'Saved',
@@ -64,6 +66,7 @@ function SavedStackScreen() {
 }
 
 function MoreStackScreen() {
+  const { colors } = useTheme();
   return (
     <MoreStack.Navigator>
       <MoreStack.Screen
@@ -76,7 +79,7 @@ function MoreStackScreen() {
         component={AboutScreen}
         options={{
           title: 'About',
-          headerStyle: { backgroundColor: colors.white },
+          headerStyle: { backgroundColor: colors.surface },
           headerTintColor: colors.navy,
           headerTitleStyle: { fontWeight: '600' },
         }}
@@ -86,7 +89,7 @@ function MoreStackScreen() {
         component={ResourcesScreen}
         options={{
           title: 'More Resources',
-          headerStyle: { backgroundColor: colors.white },
+          headerStyle: { backgroundColor: colors.surface },
           headerTintColor: colors.navy,
           headerTitleStyle: { fontWeight: '600' },
         }}
@@ -102,8 +105,13 @@ const TAB_ICONS: Record<string, { focused: string; unfocused: string }> = {
 };
 
 export default function AppNavigator() {
+  const { colors, isDark } = useTheme();
+  const navTheme = isDark
+    ? { ...DarkTheme, colors: { ...DarkTheme.colors, background: colors.background, card: colors.surface, text: colors.text, border: colors.border, primary: colors.navy } }
+    : { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: colors.background, card: colors.surface, text: colors.text, border: colors.border, primary: colors.navy } };
+
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navTheme}>
       <Tab.Navigator
         screenOptions={({ route }) => ({
           headerShown: false,
@@ -113,10 +121,10 @@ export default function AppNavigator() {
             return <Ionicons name={iconName as any} size={size} color={color} />;
           },
           tabBarActiveTintColor: colors.navy,
-          tabBarInactiveTintColor: colors.mediumGray,
+          tabBarInactiveTintColor: colors.textTertiary,
           tabBarStyle: {
-            backgroundColor: colors.white,
-            borderTopColor: colors.lightGray,
+            backgroundColor: colors.tabBar,
+            borderTopColor: colors.tabBarBorder,
             borderTopWidth: 1,
             paddingBottom: 4,
           },
@@ -124,11 +132,24 @@ export default function AppNavigator() {
             fontSize: 11,
             fontWeight: '600',
           },
+          tabBarAccessibilityLabel: route.name,
         })}
       >
-        <Tab.Screen name="Map" component={MapStackScreen} />
-        <Tab.Screen name="Saved" component={SavedStackScreen} />
-        <Tab.Screen name="More" component={MoreStackScreen} />
+        <Tab.Screen
+          name="Map"
+          component={MapStackScreen}
+          options={{ tabBarAccessibilityLabel: 'Map tab. Find resources on the map.' }}
+        />
+        <Tab.Screen
+          name="Saved"
+          component={SavedStackScreen}
+          options={{ tabBarAccessibilityLabel: 'Saved tab. View your saved resources.' }}
+        />
+        <Tab.Screen
+          name="More"
+          component={MoreStackScreen}
+          options={{ tabBarAccessibilityLabel: 'More tab. About, feedback, and settings.' }}
+        />
       </Tab.Navigator>
     </NavigationContainer>
   );

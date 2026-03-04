@@ -14,7 +14,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { FormattedListing } from '../types';
 import { useListings } from '../hooks/useListings';
 import { useSaved } from '../hooks/useSaved';
-import { colors } from '../config/siteConfig';
+import { useTheme } from '../hooks/useTheme';
 import ListingCard from '../components/ListingCard';
 
 type SavedStackParamList = {
@@ -28,6 +28,7 @@ export default function SavedScreen() {
     useNavigation<NativeStackNavigationProp<SavedStackParamList>>();
   const { listings } = useListings();
   const { savedGuids, toggleSave, isSaved, clearAll } = useSaved();
+  const { colors } = useTheme();
 
   const savedListings = useMemo(
     () => listings.filter((l) => savedGuids.includes(l.guid)),
@@ -47,12 +48,14 @@ export default function SavedScreen() {
   );
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Saved Resources</Text>
+    <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <Text style={[styles.title, { color: colors.text }]} accessibilityRole="header">
+          Saved Resources
+        </Text>
         {savedListings.length > 0 && (
-          <TouchableOpacity onPress={clearAll}>
-            <Text style={styles.clearBtn}>Clear All</Text>
+          <TouchableOpacity onPress={clearAll} accessibilityRole="button" accessibilityLabel="Clear all saved resources">
+            <Text style={[styles.clearBtn, { color: colors.danger }]}>Clear All</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -67,12 +70,12 @@ export default function SavedScreen() {
         ]}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <View style={styles.emptyIcon}>
-              <Ionicons name="heart-outline" size={56} color={colors.lightGray} />
+          <View style={styles.empty} accessibilityLabel="No saved resources yet. Tap the heart icon on any resource to save it here.">
+            <View style={[styles.emptyIcon, { backgroundColor: colors.surface }]}>
+              <Ionicons name="heart-outline" size={56} color={colors.border} />
             </View>
-            <Text style={styles.emptyTitle}>No saved resources yet</Text>
-            <Text style={styles.emptyBody}>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No saved resources yet</Text>
+            <Text style={[styles.emptyBody, { color: colors.textTertiary }]}>
               Tap the heart icon on any resource to save it here for quick access.
             </Text>
           </View>
@@ -85,7 +88,6 @@ export default function SavedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.offWhite,
   },
   header: {
     flexDirection: 'row',
@@ -93,19 +95,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: colors.lightGray,
   },
   title: {
     fontSize: 22,
     fontWeight: '800',
-    color: colors.darkGray,
   },
   clearBtn: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.danger,
   },
   list: {
     paddingTop: 12,
@@ -123,7 +121,6 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -131,12 +128,10 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.darkGray,
     marginBottom: 8,
   },
   emptyBody: {
     fontSize: 15,
-    color: colors.mediumGray,
     textAlign: 'center',
     lineHeight: 22,
   },
