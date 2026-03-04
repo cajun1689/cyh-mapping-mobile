@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect, useCallback, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,10 @@ import {
   ScrollView,
   Pressable,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
-import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Filters, FormattedListing, Meta } from '../types';
 import {
@@ -40,7 +42,7 @@ export default function FilterSheet({
   meta,
   listings,
 }: Props) {
-  const sheetRef = useRef<BottomSheet>(null);
+  const insets = useSafeAreaInsets();
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   const cities = useMemo(() => {
@@ -60,32 +62,34 @@ export default function FilterSheet({
     return getCategoryCount(listings as any);
   }, [meta, listings]);
 
-  const snapPoints = useMemo(() => ['70%', '90%'], []);
-
-  if (!visible) return null;
-
   return (
-    <Modal transparent animationType="fade" visible={visible}>
-      <Pressable style={styles.backdrop} onPress={onClose} />
-      <BottomSheet
-        ref={sheetRef}
-        index={0}
-        snapPoints={snapPoints}
-        enablePanDownToClose
-        onClose={onClose}
-        backgroundStyle={styles.sheetBg}
-        handleIndicatorStyle={{ backgroundColor: colors.lightGray }}
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Filters</Text>
-          <TouchableOpacity onPress={clearFilters}>
-            <Text style={styles.clearAll}>Clear All</Text>
+        {/* Header */}
+        <View style={[styles.header, { paddingTop: insets.top > 0 ? insets.top : 12 }]}>
+          <View style={styles.headerRow}>
+            <Text style={styles.title}>Filters</Text>
+            <TouchableOpacity onPress={clearFilters}>
+              <Text style={styles.clearAll}>Clear All</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+            <Ionicons name="close" size={24} color={colors.darkGray} />
           </TouchableOpacity>
         </View>
 
-        <BottomSheetScrollView
+        <ScrollView
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           {/* Location */}
           <SectionHeader icon="location" label="Location" />
@@ -121,7 +125,7 @@ export default function FilterSheet({
           <View style={styles.ageRow}>
             <TextInput
               style={styles.ageInput}
-              placeholder={`Age (${siteConfig.ageRange.min}–${siteConfig.ageRange.max})`}
+              placeholder={`Age (${siteConfig.ageRange.min}\u2013${siteConfig.ageRange.max})`}
               placeholderTextColor={colors.mediumGray}
               keyboardType="number-pad"
               value={filters.age}
@@ -248,10 +252,10 @@ export default function FilterSheet({
             ))}
 
           <View style={{ height: 40 }} />
-        </BottomSheetScrollView>
+        </ScrollView>
 
         {/* Apply Button */}
-        <View style={styles.applyRow}>
+        <View style={[styles.applyRow, { paddingBottom: insets.bottom + 12 }]}>
           <TouchableOpacity
             style={styles.applyBtn}
             onPress={onClose}
@@ -260,7 +264,7 @@ export default function FilterSheet({
             <Text style={styles.applyText}>Show Results</Text>
           </TouchableOpacity>
         </View>
-      </BottomSheet>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -322,23 +326,21 @@ function ChipGroup({
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-  },
-  sheetBg: {
+  container: {
+    flex: 1,
     backgroundColor: colors.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: 20,
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.lightGray,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  headerRow: {
+    flex: 1,
   },
   title: {
     fontSize: 20,
@@ -349,10 +351,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.danger,
+    marginTop: 4,
+  },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.offWhite,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   content: {
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: 8,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -500,7 +511,6 @@ const styles = StyleSheet.create({
   },
   applyRow: {
     paddingHorizontal: 20,
-    paddingBottom: 34,
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: colors.lightGray,
