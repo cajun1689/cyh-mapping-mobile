@@ -1,16 +1,23 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext, createContext } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SAVED_KEY = '@cyh_saved_guids';
 
-interface UseSavedReturn {
+interface SavedContextValue {
   savedGuids: number[];
   toggleSave: (guid: number) => void;
   isSaved: (guid: number) => boolean;
   clearAll: () => void;
 }
 
-export function useSaved(): UseSavedReturn {
+const SavedContext = createContext<SavedContextValue>({
+  savedGuids: [],
+  toggleSave: () => {},
+  isSaved: () => false,
+  clearAll: () => {},
+});
+
+export function SavedProvider({ children }: { children: React.ReactNode }) {
   const [savedGuids, setSavedGuids] = useState<number[]>([]);
 
   useEffect(() => {
@@ -18,9 +25,7 @@ export function useSaved(): UseSavedReturn {
       if (raw) {
         try {
           setSavedGuids(JSON.parse(raw));
-        } catch {
-          // corrupt data, start fresh
-        }
+        } catch {}
       }
     });
   }, []);
@@ -52,5 +57,11 @@ export function useSaved(): UseSavedReturn {
     AsyncStorage.removeItem(SAVED_KEY);
   }, []);
 
-  return { savedGuids, toggleSave, isSaved, clearAll };
+  const value = { savedGuids, toggleSave, isSaved, clearAll };
+
+  return React.createElement(SavedContext.Provider, { value }, children);
+}
+
+export function useSaved(): SavedContextValue {
+  return useContext(SavedContext);
 }
