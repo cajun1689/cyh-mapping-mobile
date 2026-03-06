@@ -98,11 +98,9 @@ export function filterListings(
   return listings.filter((listing) => {
     if (hidden.includes(listing.guid)) return false;
 
-    if (
-      filters.hideFaithBased &&
-      listing.keywords?.includes('Faith-Based')
-    ) {
-      return false;
+    if (filters.hideFaithBased) {
+      if (listing.keywords?.includes('Faith-Based')) return false;
+      if (listing.category?.startsWith('Faith Based')) return false;
     }
 
     if (filters.ageGroup !== 'all') {
