@@ -321,39 +321,26 @@ export default function MapScreen() {
         longitude: loc.coords.longitude,
       };
       setUserLocation(coords);
+      userZoomed.current = true;
 
       const nearby = validListings
         .map((l) => ({
-          lat: l.coords[0],
-          lng: l.coords[1],
+          latitude: l.coords[0],
+          longitude: l.coords[1],
           dist: getDistance(coords.latitude, coords.longitude, l.coords[0], l.coords[1]),
         }))
         .sort((a, b) => a.dist - b.dist)
         .slice(0, 5);
 
-      if (nearby.length > 0) {
-        const lats = [coords.latitude, ...nearby.map((n) => n.lat)];
-        const lngs = [coords.longitude, ...nearby.map((n) => n.lng)];
-        const minLat = Math.min(...lats);
-        const maxLat = Math.max(...lats);
-        const minLng = Math.min(...lngs);
-        const maxLng = Math.max(...lngs);
-        const PAD = 0.4;
-        mapRef.current?.animateToRegion(
-          {
-            latitude: (minLat + maxLat) / 2,
-            longitude: (minLng + maxLng) / 2,
-            latitudeDelta: Math.max((maxLat - minLat) * (1 + PAD), 0.02),
-            longitudeDelta: Math.max((maxLng - minLng) * (1 + PAD), 0.02),
-          },
-          reducedMotion ? 1 : 600,
-        );
-      } else {
-        mapRef.current?.animateToRegion(
-          { ...coords, latitudeDelta: 0.1, longitudeDelta: 0.1 },
-          reducedMotion ? 1 : 600,
-        );
-      }
+      const points = [
+        coords,
+        ...nearby.map((n) => ({ latitude: n.latitude, longitude: n.longitude })),
+      ];
+
+      mapRef.current?.fitToCoordinates(points, {
+        edgePadding: { top: 120, right: 60, bottom: 200, left: 60 },
+        animated: !reducedMotion,
+      });
     } catch {
       // location unavailable
     }
@@ -389,8 +376,10 @@ export default function MapScreen() {
   }, [validListings]);
 
   const hasInitiallyFit = useRef(false);
+  const userZoomed = useRef(false);
   useEffect(() => {
     if (!boundingRegion || !mapRef.current || !mapReady) return;
+    if (userZoomed.current) return;
     if (!hasInitiallyFit.current) {
       const timer = setTimeout(() => {
         try {
@@ -399,10 +388,6 @@ export default function MapScreen() {
       }, 600);
       hasInitiallyFit.current = true;
       return () => clearTimeout(timer);
-    } else {
-      try {
-        mapRef.current.animateToRegion(boundingRegion, animDuration);
-      } catch {}
     }
   }, [boundingRegion, mapReady]);
 
