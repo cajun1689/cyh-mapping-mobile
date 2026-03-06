@@ -21,7 +21,13 @@ import {
   getCostCount,
   getCategoryCount,
 } from '../utils/filters';
-import { colors, siteConfig } from '../config/siteConfig';
+import {
+  colors,
+  siteConfig,
+  categoryColors,
+  categoryIcons,
+  defaultCategoryColor,
+} from '../config/siteConfig';
 
 interface Props {
   visible: boolean;
@@ -180,76 +186,122 @@ export default function FilterSheet({
           <SectionHeader icon="grid" label="Category" />
           {Object.entries(categories)
             .sort(([a], [b]) => a.localeCompare(b))
-            .map(([parent, subs]) => (
-              <View key={parent}>
-                <TouchableOpacity
-                  style={styles.categoryParent}
-                  onPress={() =>
-                    setExpandedCategory(
-                      expandedCategory === parent ? null : parent,
-                    )
-                  }
-                >
-                  <Ionicons
-                    name={
-                      expandedCategory === parent
-                        ? 'chevron-down'
-                        : 'chevron-forward'
-                    }
-                    size={16}
-                    color={colors.mediumGray}
-                  />
-                  <Text
-                    style={[
-                      styles.categoryParentText,
-                      filters.category === parent &&
-                        styles.categoryParentTextActive,
-                    ]}
-                  >
-                    {parent}
-                  </Text>
+            .map(([parent, subs]) => {
+              const subKeys = Object.keys(subs);
+              const totalCount = Object.values(subs).reduce((a: number, b: number) => a + b, 0);
+              const catColor = categoryColors[parent] || defaultCategoryColor;
+              const iconName = (categoryIcons[parent] || 'folder-outline') as any;
+              const isSingleSub = subKeys.length === 1;
+
+              if (isSingleSub) {
+                const full = `${parent}: ${subKeys[0]}`;
+                const isActive = filters.category === full || filters.category.startsWith(`${parent}:`);
+                return (
                   <TouchableOpacity
+                    key={parent}
+                    style={[
+                      styles.categoryFlat,
+                      isActive && { backgroundColor: catColor + '18', borderColor: catColor },
+                    ]}
                     onPress={() =>
-                      setFilter(
-                        'category',
-                        filters.category === parent ? '' : parent,
+                      setFilter('category', isActive ? '' : `${parent}:`)
+                    }
+                  >
+                    <View style={[styles.categoryIconDot, { backgroundColor: catColor }]}>
+                      <Ionicons name={iconName} size={14} color="#fff" />
+                    </View>
+                    <Text
+                      style={[
+                        styles.categoryFlatText,
+                        isActive && { color: catColor, fontWeight: '700' },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {parent}
+                    </Text>
+                    <Text style={styles.categoryCount}>{totalCount}</Text>
+                  </TouchableOpacity>
+                );
+              }
+
+              const isParentActive = filters.category.startsWith(`${parent}:`);
+              return (
+                <View key={parent}>
+                  <TouchableOpacity
+                    style={styles.categoryParent}
+                    onPress={() =>
+                      setExpandedCategory(
+                        expandedCategory === parent ? null : parent,
                       )
                     }
-                    hitSlop={8}
                   >
-                    <Text style={styles.categoryCount}>
-                      {Object.values(subs).reduce((a, b) => a + b, 0)}
+                    <View style={[styles.categoryIconDot, { backgroundColor: catColor }]}>
+                      <Ionicons name={iconName} size={14} color="#fff" />
+                    </View>
+                    <Text
+                      style={[
+                        styles.categoryParentText,
+                        isParentActive && { color: catColor },
+                      ]}
+                    >
+                      {parent}
                     </Text>
+                    <Ionicons
+                      name={
+                        expandedCategory === parent
+                          ? 'chevron-down'
+                          : 'chevron-forward'
+                      }
+                      size={14}
+                      color={colors.mediumGray}
+                    />
+                    <TouchableOpacity
+                      onPress={() =>
+                        setFilter(
+                          'category',
+                          isParentActive ? '' : `${parent}:`,
+                        )
+                      }
+                      hitSlop={8}
+                    >
+                      <Text style={[styles.categoryCount, isParentActive && { color: catColor }]}>
+                        {totalCount}
+                      </Text>
+                    </TouchableOpacity>
                   </TouchableOpacity>
-                </TouchableOpacity>
-                {expandedCategory === parent &&
-                  Object.entries(subs)
-                    .sort(([a], [b]) => a.localeCompare(b))
-                    .map(([sub, count]) => {
-                      const full = `${parent}: ${sub}`;
-                      const isActive = filters.category === full;
-                      return (
-                        <TouchableOpacity
-                          key={full}
-                          style={styles.categorySub}
-                          onPress={() =>
-                            setFilter('category', isActive ? '' : full)
-                          }
-                        >
-                          <Text
+                  {expandedCategory === parent &&
+                    Object.entries(subs)
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([sub, count]) => {
+                        const full = `${parent}: ${sub}`;
+                        const isActive = filters.category === full;
+                        return (
+                          <TouchableOpacity
+                            key={full}
                             style={[
-                              styles.categorySubText,
-                              isActive && styles.categorySubTextActive,
+                              styles.categorySub,
+                              isActive && { backgroundColor: catColor + '12' },
                             ]}
+                            onPress={() =>
+                              setFilter('category', isActive ? '' : full)
+                            }
                           >
-                            {sub}
-                          </Text>
-                          <Text style={styles.categoryCount}>{count}</Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-              </View>
-            ))}
+                            <View style={[styles.subDot, { backgroundColor: catColor }]} />
+                            <Text
+                              style={[
+                                styles.categorySubText,
+                                isActive && { color: catColor, fontWeight: '600' },
+                              ]}
+                            >
+                              {sub}
+                            </Text>
+                            <Text style={styles.categoryCount}>{count}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                </View>
+              );
+            })}
 
           <View style={{ height: 40 }} />
         </ScrollView>
@@ -472,20 +524,49 @@ const styles = StyleSheet.create({
     color: colors.mediumGray,
     marginTop: 2,
   },
+  categoryFlat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    gap: 10,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    marginBottom: 4,
+  },
+  categoryFlatText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '500',
+    color: colors.darkGray,
+  },
+  categoryIconDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  subDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
   categoryParent: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 10,
-    gap: 8,
+    paddingHorizontal: 8,
+    gap: 10,
+    marginBottom: 2,
   },
   categoryParentText: {
     flex: 1,
     fontSize: 15,
     fontWeight: '600',
     color: colors.darkGray,
-  },
-  categoryParentTextActive: {
-    color: colors.navy,
   },
   categoryCount: {
     fontSize: 12,
@@ -497,17 +578,16 @@ const styles = StyleSheet.create({
   categorySub: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingLeft: 32,
+    paddingVertical: 9,
+    paddingLeft: 48,
+    paddingRight: 8,
+    borderRadius: 8,
+    marginBottom: 2,
   },
   categorySubText: {
     flex: 1,
     fontSize: 14,
     color: colors.darkGray,
-  },
-  categorySubTextActive: {
-    color: colors.navy,
-    fontWeight: '600',
   },
   applyRow: {
     paddingHorizontal: 20,

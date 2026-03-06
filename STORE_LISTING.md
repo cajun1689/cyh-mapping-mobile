@@ -14,13 +14,24 @@ Find youth-serving resources across Wyoming for ages 11-20.
 The Wyoming Youth Resource Map helps young people ages 11-20 and their allies connect to youth-serving resources, organizations, and leadership opportunities across Wyoming.
 
 **What you can find:**
-- Counseling — individual providers and offices
-- Psychiatric care and medication management
-- Substance use treatment and prevention
-- Crisis services and suicide prevention hotlines
+- Counseling and psychiatric care
+- Basic needs — food, clothing, and housing assistance
+- Belonging and connection — arts, recreation, clubs, and community spaces
+- Education and workforce — college prep, career training, and mentoring
+- Emergency services and crisis support
+- Healthcare — medical, dental, and behavioral health
+- Disability services and accommodations
+- Family life support and parenting resources
+- Legal assistance
+- LGBTQ+ resources and safe spaces
+- Faith-based youth groups
+- Transportation assistance
+- Technology safety and cyberbullying resources
+- Violence prevention and justice-involved youth services
+- Resiliency building programs
 
 **Features:**
-- Interactive map with 50+ organizations across Wyoming
+- Interactive map with 230+ organizations across Wyoming
 - Search and filter by location, service type, cost, age, and more
 - "Near Me" GPS feature to find the closest resources
 - Save resources for quick access later
@@ -36,7 +47,7 @@ The Wyoming Youth Resource Map helps young people ages 11-20 and their allies co
 Developed by Casper Youth Hub in partnership with Unicorn Solutions. Adapted from the Oregon Youth Resource Map by the Mapping Action Collective.
 
 ## Keywords (iOS, 100 chars max)
-wyoming,youth,resources,map,casper,mental health,housing,counseling,teen,services
+wyoming,youth,resources,map,casper,mental health,housing,food,counseling,teen,services,disability,LGBTQ
 
 ## Category
 - iOS: Reference

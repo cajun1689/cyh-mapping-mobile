@@ -17,7 +17,7 @@ import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Svg, { Circle as SvgCircle } from 'react-native-svg';
 
@@ -42,7 +42,7 @@ const DOT_SIZE = 14;
 const DOT_SELECTED_SIZE = 20;
 
 type MapStackParamList = {
-  MapMain: undefined;
+  MapMain: { chatGuids?: number[] } | undefined;
   Detail: { listing: FormattedListing };
 };
 
@@ -176,6 +176,7 @@ export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const navigation =
     useNavigation<NativeStackNavigationProp<MapStackParamList>>();
+  const route = useRoute<RouteProp<MapStackParamList, 'MapMain'>>();
   const { colors: tc, isDark, reducedMotion } = useTheme();
   const animDuration = reducedMotion ? 1 : 500;
 
@@ -191,6 +192,15 @@ export default function MapScreen() {
   } | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
   const [mapReady, setMapReady] = useState(false);
+  const [chatGuids, setChatGuids] = useState<number[] | null>(null);
+
+  useEffect(() => {
+    const params = route.params;
+    if (params?.chatGuids && params.chatGuids.length > 0) {
+      setChatGuids(params.chatGuids);
+      navigation.setParams({ chatGuids: undefined });
+    }
+  }, [route.params?.chatGuids]);
 
   const mapRef = useRef<MapView>(null);
   const sheetRef = useRef<BottomSheet>(null);
@@ -202,9 +212,15 @@ export default function MapScreen() {
     [],
   );
 
+  const chatFiltered = useMemo(() => {
+    if (!chatGuids) return filtered;
+    const guidSet = new Set(chatGuids);
+    return filtered.filter(l => guidSet.has(l.guid));
+  }, [filtered, chatGuids]);
+
   const sortedFiltered = useMemo(() => {
-    if (!userLocation) return filtered;
-    return [...filtered].sort(
+    if (!userLocation) return chatFiltered;
+    return [...chatFiltered].sort(
       (a, b) =>
         getDistance(
           userLocation.latitude,
@@ -219,7 +235,7 @@ export default function MapScreen() {
           b.coords[1],
         ),
     );
-  }, [filtered, userLocation]);
+  }, [chatFiltered, userLocation]);
 
   const handleMarkerPress = useCallback(
     (listing: FormattedListing) => {
@@ -588,6 +604,24 @@ export default function MapScreen() {
         <Ionicons name="navigate" size={20} color={tc.navy} />
       </TouchableOpacity>
 
+      {/* Chat recommendations chip */}
+      {chatGuids && chatGuids.length > 0 && (
+        <View style={[styles.chatChipRow, { top: insets.top + (meta?.listingCategories ? 102 : 62), backgroundColor: tc.navy }]}>
+          <Ionicons name="chatbubble-ellipses" size={14} color="#fff" />
+          <Text style={styles.chatChipText}>
+            Showing {chatGuids.length} chat recommendation{chatGuids.length !== 1 ? 's' : ''}
+          </Text>
+          <TouchableOpacity
+            onPress={() => setChatGuids(null)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel="Clear chat filter"
+          >
+            <Ionicons name="close-circle" size={18} color="rgba(255,255,255,0.8)" />
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Active filter chips */}
       {activeCount > 0 && (
         <ScrollView
@@ -840,6 +874,29 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 8,
     elevation: 4,
+  },
+  chatChipRow: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    zIndex: 11,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  chatChipText: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
   },
   chipRow: {
     position: 'absolute',

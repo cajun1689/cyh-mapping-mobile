@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import MapScreen from '../screens/MapScreen';
 import DetailScreen from '../screens/DetailScreen';
 import SavedScreen from '../screens/SavedScreen';
+import ChatScreen from '../screens/ChatScreen';
 import MoreMenuScreen from '../screens/MoreScreen';
 import AboutScreen from '../screens/AboutScreen';
 import ResourcesScreen from '../screens/ResourcesScreen';
@@ -14,6 +15,7 @@ import { useTheme } from '../hooks/useTheme';
 
 const MapStack = createNativeStackNavigator();
 const SavedStack = createNativeStackNavigator();
+const ChatStack = createNativeStackNavigator();
 const MoreStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -65,6 +67,18 @@ function SavedStackScreen() {
   );
 }
 
+function ChatStackScreen() {
+  return (
+    <ChatStack.Navigator>
+      <ChatStack.Screen
+        name="ChatMain"
+        component={ChatScreen}
+        options={{ headerShown: false }}
+      />
+    </ChatStack.Navigator>
+  );
+}
+
 function MoreStackScreen() {
   const { colors } = useTheme();
   return (
@@ -101,6 +115,7 @@ function MoreStackScreen() {
 const TAB_ICONS: Record<string, { focused: string; unfocused: string }> = {
   Map: { focused: 'map', unfocused: 'map-outline' },
   Saved: { focused: 'heart', unfocused: 'heart-outline' },
+  Chat: { focused: 'chatbubble-ellipses', unfocused: 'chatbubble-ellipses-outline' },
   More: { focused: 'ellipsis-horizontal', unfocused: 'ellipsis-horizontal-outline' },
 };
 
@@ -144,6 +159,11 @@ export default function AppNavigator() {
           name="Saved"
           component={SavedStackScreen}
           options={{ tabBarAccessibilityLabel: 'Saved tab. View your saved resources.' }}
+        />
+        <Tab.Screen
+          name="Chat"
+          component={ChatStackScreen}
+          options={{ tabBarAccessibilityLabel: 'Chat tab. Ask for help finding resources.' }}
         />
         <Tab.Screen
           name="More"
