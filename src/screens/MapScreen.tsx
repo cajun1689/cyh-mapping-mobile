@@ -10,6 +10,7 @@ import {
   Platform,
   Keyboard,
   ScrollView,
+  InteractionManager,
 } from 'react-native';
 import MapView, { Marker, Region, PROVIDER_DEFAULT } from 'react-native-maps';
 import ClusteredMapView from 'react-native-map-clustering';
@@ -263,15 +264,17 @@ export default function MapScreen() {
   const handleMarkerPress = useCallback(
     (listing: FormattedListing) => {
       setSelectedGuid(listing.guid);
-      sheetRef.current?.snapToIndex(1);
-      const idx = sortedFiltered.findIndex((l) => l.guid === listing.guid);
-      if (idx >= 0) {
-        setTimeout(() => {
-          try {
-            flatListRef.current?.scrollToIndex({ index: idx, animated: true });
-          } catch {}
-        }, 500);
-      }
+      InteractionManager.runAfterInteractions(() => {
+        sheetRef.current?.snapToIndex(1);
+        const idx = sortedFiltered.findIndex((l) => l.guid === listing.guid);
+        if (idx >= 0) {
+          setTimeout(() => {
+            try {
+              flatListRef.current?.scrollToIndex({ index: idx, animated: true });
+            } catch {}
+          }, 500);
+        }
+      });
     },
     [sortedFiltered],
   );
@@ -563,7 +566,7 @@ export default function MapScreen() {
           >
             <MarkerDot
               color={getMarkerColor(listing)}
-              isSelected={listing.guid === selectedGuid}
+              isSelected={false}
             />
           </Marker>
         ))}
