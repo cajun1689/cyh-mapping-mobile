@@ -264,19 +264,9 @@ export default function MapScreen() {
   const handleMarkerPress = useCallback(
     (listing: FormattedListing) => {
       setSelectedGuid(listing.guid);
-      InteractionManager.runAfterInteractions(() => {
-        sheetRef.current?.snapToIndex(1);
-        const idx = sortedFiltered.findIndex((l) => l.guid === listing.guid);
-        if (idx >= 0) {
-          setTimeout(() => {
-            try {
-              flatListRef.current?.scrollToIndex({ index: idx, animated: true });
-            } catch {}
-          }, 500);
-        }
-      });
+      navigation.navigate('Detail', { listing });
     },
-    [sortedFiltered],
+    [navigation],
   );
 
   const handleMapMarkerPress = useCallback(
