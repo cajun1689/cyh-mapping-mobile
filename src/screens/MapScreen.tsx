@@ -38,8 +38,9 @@ import ListingCard from '../components/ListingCard';
 import FilterSheet from '../components/FilterSheet';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const DOT_SIZE = 14;
-const DOT_SELECTED_SIZE = 20;
+const DOT_SIZE = 16;
+const DOT_SELECTED_SIZE = 22;
+const TOUCH_TARGET = 44;
 
 type MapStackParamList = {
   MapMain: { chatGuids?: number[] } | undefined;
@@ -49,13 +50,16 @@ type MapStackParamList = {
 function MarkerDot({ color, isSelected }: { color: string; isSelected: boolean }) {
   const size = isSelected ? DOT_SELECTED_SIZE : DOT_SIZE;
   return (
-    <View style={[
-      markerStyles.wrapper,
-      { width: size + 8, height: size + 8 },
-    ]}>
-      {isSelected && (
-        <View style={[markerStyles.ring, { borderColor: color }]} />
-      )}
+    <View style={markerStyles.wrapper}>
+      <View
+        style={[
+          markerStyles.ring,
+          {
+            borderColor: color,
+            opacity: isSelected ? 1 : 0,
+          },
+        ]}
+      />
       <View
         style={[
           markerStyles.dot,
@@ -73,6 +77,8 @@ function MarkerDot({ color, isSelected }: { color: string; isSelected: boolean }
 
 const markerStyles = StyleSheet.create({
   wrapper: {
+    width: TOUCH_TARGET,
+    height: TOUCH_TARGET,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -180,7 +186,7 @@ export default function MapScreen() {
   const { colors: tc, isDark, reducedMotion } = useTheme();
   const animDuration = reducedMotion ? 1 : 500;
 
-  const { listings, rawListings, meta, loading, error, refresh } = useListings();
+  const { listings, rawListings, meta, loading, refreshing, error, refresh } = useListings();
   const { filters, setFilter, clearFilters, activeCount, filtered } =
     useFilters(listings);
   const { savedGuids, toggleSave, isSaved } = useSaved();
@@ -212,6 +218,15 @@ export default function MapScreen() {
     [],
   );
 
+  const hasSubBar = useMemo(() => {
+    if (!meta?.listingCategories) return false;
+    const activeParent = Object.keys(meta.listingCategories).find(p =>
+      filters.category.startsWith(p),
+    );
+    if (!activeParent) return false;
+    return Object.keys(meta.listingCategories[activeParent] || {}).length > 1;
+  }, [meta, filters.category]);
+
   const chatFiltered = useMemo(() => {
     if (!chatGuids) return filtered;
     const guidSet = new Set(chatGuids);
@@ -237,16 +252,36 @@ export default function MapScreen() {
     );
   }, [chatFiltered, userLocation]);
 
+  const listingByGuid = useMemo(() => {
+    const map: Record<string, FormattedListing> = {};
+    for (const l of sortedFiltered) {
+      if (l.guid != null) map[String(l.guid)] = l;
+    }
+    return map;
+  }, [sortedFiltered]);
+
   const handleMarkerPress = useCallback(
     (listing: FormattedListing) => {
       setSelectedGuid(listing.guid);
-      sheetRef.current?.snapToIndex(0);
+      sheetRef.current?.snapToIndex(1);
       const idx = sortedFiltered.findIndex((l) => l.guid === listing.guid);
       if (idx >= 0) {
-        flatListRef.current?.scrollToIndex({ index: idx, animated: true });
+        setTimeout(() => {
+          flatListRef.current?.scrollToIndex({ index: idx, animated: true });
+        }, 300);
       }
     },
     [sortedFiltered],
+  );
+
+  const handleMapMarkerPress = useCallback(
+    (e: any) => {
+      const id = e?.nativeEvent?.id;
+      if (!id || id.startsWith('cluster-')) return;
+      const listing = listingByGuid[id];
+      if (listing) handleMarkerPress(listing);
+    },
+    [listingByGuid, handleMarkerPress],
   );
 
   const handleCardPress = useCallback(
@@ -266,31 +301,6 @@ export default function MapScreen() {
     [navigation],
   );
 
-  const handleNearMe = useCallback(async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') return;
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      const coords = {
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
-      };
-      setUserLocation(coords);
-      mapRef.current?.animateToRegion(
-        {
-          ...coords,
-          latitudeDelta: 0.3,
-          longitudeDelta: 0.3,
-        },
-        reducedMotion ? 1 : 600,
-      );
-    } catch {
-      // location unavailable
-    }
-  }, []);
-
   const validListings = useMemo(
     () =>
       sortedFiltered.filter(
@@ -303,6 +313,56 @@ export default function MapScreen() {
       ),
     [sortedFiltered],
   );
+
+  const handleNearMe = useCallback(async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const coords = {
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      };
+      setUserLocation(coords);
+
+      const nearby = validListings
+        .map((l) => ({
+          lat: l.coords[0],
+          lng: l.coords[1],
+          dist: getDistance(coords.latitude, coords.longitude, l.coords[0], l.coords[1]),
+        }))
+        .sort((a, b) => a.dist - b.dist)
+        .slice(0, 5);
+
+      if (nearby.length > 0) {
+        const lats = [coords.latitude, ...nearby.map((n) => n.lat)];
+        const lngs = [coords.longitude, ...nearby.map((n) => n.lng)];
+        const minLat = Math.min(...lats);
+        const maxLat = Math.max(...lats);
+        const minLng = Math.min(...lngs);
+        const maxLng = Math.max(...lngs);
+        const PAD = 0.4;
+        mapRef.current?.animateToRegion(
+          {
+            latitude: (minLat + maxLat) / 2,
+            longitude: (minLng + maxLng) / 2,
+            latitudeDelta: Math.max((maxLat - minLat) * (1 + PAD), 0.02),
+            longitudeDelta: Math.max((maxLng - minLng) * (1 + PAD), 0.02),
+          },
+          reducedMotion ? 1 : 600,
+        );
+      } else {
+        mapRef.current?.animateToRegion(
+          { ...coords, latitudeDelta: 0.1, longitudeDelta: 0.1 },
+          reducedMotion ? 1 : 600,
+        );
+      }
+    } catch {
+      // location unavailable
+    }
+  }, [validListings, reducedMotion]);
 
   const boundingRegion = useMemo((): Region | null => {
     if (validListings.length === 0) return null;
@@ -474,7 +534,7 @@ export default function MapScreen() {
         }}
         showsUserLocation={!!userLocation}
         showsMyLocationButton={false}
-        mapPadding={{ top: insets.top + 120, bottom: 140, left: 16, right: 16 }}
+        mapPadding={{ top: insets.top + (hasSubBar ? 155 : 120), bottom: 140, left: 16, right: 16 }}
         radius={50}
         minZoomLevel={5}
         maxZoom={14}
@@ -482,6 +542,7 @@ export default function MapScreen() {
         renderCluster={renderCluster}
         superClusterRef={superClusterRef}
         onMapReady={() => setMapReady(true)}
+        onMarkerPress={handleMapMarkerPress}
         onPress={() => {
           Keyboard.dismiss();
           setSelectedGuid(null);
@@ -496,7 +557,9 @@ export default function MapScreen() {
               longitude: listing.coords[1],
             }}
             onPress={() => handleMarkerPress(listing)}
-            tracksViewChanges={false}
+            tracksViewChanges={listing.guid === selectedGuid}
+            anchor={{ x: 0.5, y: 0.5 }}
+            flat
           >
             <MarkerDot
               color={getMarkerColor(listing)}
@@ -592,21 +655,111 @@ export default function MapScreen() {
         </ScrollView>
       )}
 
-      {/* Near Me button */}
-      <TouchableOpacity
-        style={[styles.nearMeBtn, { bottom: snapPoints[0] + 16, backgroundColor: tc.surface }]}
-        onPress={handleNearMe}
-        activeOpacity={0.8}
-        accessibilityRole="button"
-        accessibilityLabel="Near me"
-        accessibilityHint="Uses your location to sort resources by distance"
-      >
-        <Ionicons name="navigate" size={20} color={tc.navy} />
-      </TouchableOpacity>
+      {/* Sub-category Bar — visible when a parent category with multiple subs is selected */}
+      {meta?.listingCategories && (() => {
+        const activeParent = Object.keys(meta.listingCategories).find(p =>
+          filters.category.startsWith(p),
+        );
+        if (!activeParent) return null;
+        const subs = Object.keys(meta.listingCategories[activeParent] || {});
+        if (subs.length <= 1) return null;
+        const parentColor = categoryColors[activeParent] || defaultCategoryColor;
+        const isParentOnly = filters.category === `${activeParent}:`;
+        return (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={[styles.subCategoryBar, { top: insets.top + 100 }]}
+            contentContainerStyle={styles.categoryBarContent}
+          >
+            <TouchableOpacity
+              style={[
+                styles.subPill,
+                { backgroundColor: isParentOnly ? parentColor : tc.mapOverlay, borderColor: parentColor },
+              ]}
+              activeOpacity={0.7}
+              onPress={() => setFilter('category', `${activeParent}:`)}
+              accessibilityRole="button"
+              accessibilityLabel={`All ${activeParent}`}
+              accessibilityState={{ selected: isParentOnly }}
+            >
+              <Text
+                style={[styles.subPillText, { color: isParentOnly ? '#FFFFFF' : tc.text }]}
+                numberOfLines={1}
+                maxFontSizeMultiplier={1.3}
+              >
+                All
+              </Text>
+            </TouchableOpacity>
+            {subs.map((sub) => {
+              const fullCat = `${activeParent}: ${sub}`;
+              const isSubActive = filters.category === fullCat;
+              return (
+                <TouchableOpacity
+                  key={sub}
+                  style={[
+                    styles.subPill,
+                    { backgroundColor: isSubActive ? parentColor : tc.mapOverlay, borderColor: parentColor },
+                  ]}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    if (isSubActive) {
+                      setFilter('category', `${activeParent}:`);
+                    } else {
+                      setFilter('category', fullCat);
+                    }
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${sub} sub-category`}
+                  accessibilityState={{ selected: isSubActive }}
+                  accessibilityHint={isSubActive ? 'Tap to show all in this category' : `Tap to filter to ${sub}`}
+                >
+                  <Text
+                    style={[styles.subPillText, { color: isSubActive ? '#FFFFFF' : tc.text }]}
+                    numberOfLines={1}
+                    maxFontSizeMultiplier={1.3}
+                  >
+                    {sub}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        );
+      })()}
+
+      {/* Floating action buttons */}
+      <View style={[styles.fabColumn, { bottom: snapPoints[0] + 16 }]}>
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: tc.surface }]}
+          onPress={refresh}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Refresh data"
+          accessibilityHint="Fetches the latest resources from the server"
+          disabled={refreshing}
+        >
+          {refreshing ? (
+            <ActivityIndicator size="small" color={tc.navy} />
+          ) : (
+            <Ionicons name="refresh" size={20} color={tc.navy} />
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: tc.surface }]}
+          onPress={handleNearMe}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Near me"
+          accessibilityHint="Uses your location to sort resources by distance"
+        >
+          <Ionicons name="navigate" size={20} color={tc.navy} />
+        </TouchableOpacity>
+      </View>
 
       {/* Chat recommendations chip */}
       {chatGuids && chatGuids.length > 0 && (
-        <View style={[styles.chatChipRow, { top: insets.top + (meta?.listingCategories ? 102 : 62), backgroundColor: tc.navy }]}>
+        <View style={[styles.chatChipRow, { top: insets.top + (meta?.listingCategories ? (hasSubBar ? 138 : 102) : 62), backgroundColor: tc.navy }]}>
           <Ionicons name="chatbubble-ellipses" size={14} color="#fff" />
           <Text style={styles.chatChipText}>
             Showing {chatGuids.length} chat recommendation{chatGuids.length !== 1 ? 's' : ''}
@@ -627,7 +780,7 @@ export default function MapScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={[styles.chipRow, { top: insets.top + 102 }]}
+          style={[styles.chipRow, { top: insets.top + (hasSubBar ? 138 : 102) }]}
           contentContainerStyle={styles.chipRowContent}
         >
           {filters.city ? (
@@ -860,9 +1013,36 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
-  nearMeBtn: {
+  subCategoryBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  subPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  subPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  fabColumn: {
     position: 'absolute',
     right: 16,
+    alignItems: 'center',
+    gap: 10,
+  },
+  fab: {
     width: 42,
     height: 42,
     borderRadius: 21,

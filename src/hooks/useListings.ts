@@ -14,8 +14,10 @@ interface UseListingsReturn {
   rawListings: Listing[];
   meta: Meta | null;
   loading: boolean;
+  refreshing: boolean;
   error: string | null;
   refresh: () => Promise<void>;
+  lastUpdated: Date | null;
 }
 
 export function useListings(): UseListingsReturn {
@@ -23,7 +25,9 @@ export function useListings(): UseListingsReturn {
   const [listings, setListings] = useState<FormattedListing[]>([]);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const isMounted = useRef(true);
 
   const loadCached = useCallback(async (): Promise<boolean> => {
@@ -41,6 +45,7 @@ export function useListings(): UseListingsReturn {
           setRawListings(raw);
           setListings(formatListings(raw));
           setMeta(metaData);
+          setLastUpdated(new Date(ts));
         }
         return Date.now() - ts < CACHE_TTL;
       }
@@ -69,10 +74,13 @@ export function useListings(): UseListingsReturn {
         setError(null);
       }
 
+      const now = Date.now();
+      if (isMounted.current) setLastUpdated(new Date(now));
+
       await Promise.all([
         AsyncStorage.setItem(CACHE_KEY_LISTINGS, JSON.stringify(raw)),
         AsyncStorage.setItem(CACHE_KEY_META, JSON.stringify(metaData)),
-        AsyncStorage.setItem(CACHE_KEY_TS, Date.now().toString()),
+        AsyncStorage.setItem(CACHE_KEY_TS, now.toString()),
       ]);
     } catch (e: any) {
       if (isMounted.current) {
@@ -82,10 +90,10 @@ export function useListings(): UseListingsReturn {
   }, []);
 
   const refresh = useCallback(async () => {
-    setLoading(true);
+    setRefreshing(true);
     setError(null);
     await fetchFresh();
-    if (isMounted.current) setLoading(false);
+    if (isMounted.current) setRefreshing(false);
   }, [fetchFresh]);
 
   useEffect(() => {
@@ -101,5 +109,5 @@ export function useListings(): UseListingsReturn {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { listings, rawListings, meta, loading, error, refresh };
+  return { listings, rawListings, meta, loading, refreshing, error, refresh, lastUpdated };
 }
