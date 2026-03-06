@@ -267,8 +267,10 @@ export default function MapScreen() {
       const idx = sortedFiltered.findIndex((l) => l.guid === listing.guid);
       if (idx >= 0) {
         setTimeout(() => {
-          flatListRef.current?.scrollToIndex({ index: idx, animated: true });
-        }, 300);
+          try {
+            flatListRef.current?.scrollToIndex({ index: idx, animated: true });
+          } catch {}
+        }, 500);
       }
     },
     [sortedFiltered],
@@ -556,10 +558,8 @@ export default function MapScreen() {
               latitude: listing.coords[0],
               longitude: listing.coords[1],
             }}
-            onPress={() => handleMarkerPress(listing)}
-            tracksViewChanges={listing.guid === selectedGuid}
+            tracksViewChanges={false}
             anchor={{ x: 0.5, y: 0.5 }}
-            flat
           >
             <MarkerDot
               color={getMarkerColor(listing)}
@@ -832,6 +832,13 @@ export default function MapScreen() {
           renderItem={renderCard}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          onScrollToIndexFailed={(info: any) => {
+            setTimeout(() => {
+              try {
+                flatListRef.current?.scrollToIndex({ index: info.index, animated: true });
+              } catch {}
+            }, 500);
+          }}
           ListEmptyComponent={
             <View style={styles.emptyList}>
               <Ionicons
