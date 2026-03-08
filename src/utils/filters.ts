@@ -28,7 +28,7 @@ export const getCityCount = (listings: Listing[]): Record<string, number> => {
   return cityCount;
 };
 
-const HIDDEN_KEYWORDS = ['Faith-Based'];
+const HIDDEN_KEYWORDS = ['Faith-Based', 'Hidden'];
 
 export const getKeywordCount = (listings: Listing[]): Record<string, number> => {
   const keywordCount: Record<string, number> = {};
@@ -102,6 +102,8 @@ export function filterListings(
       if (listing.keywords?.includes('Faith-Based')) return false;
       if (listing.category?.startsWith('Faith Based')) return false;
     }
+
+    if (listing.keywords?.includes('Hidden') && !filters.search && !filters.tag) return false;
 
     if (filters.ageGroup !== 'all') {
       const group = listing.age_group || 'Youth and Adult';
