@@ -42,6 +42,8 @@ export interface Listing {
   latitude: number;
   longitude: number;
   image_url?: string;
+  office_entrance_image_url?: string;
+  internal_directions?: string;
   contact_name?: string;
   contact_email?: string;
   contact_phone?: string;

@@ -19,10 +19,14 @@ import { FormattedListing } from '../types';
 import { useSaved } from '../hooks/useSaved';
 import { formatSocialMediaUrl } from '../utils/filters';
 import {
+  API_BASE,
   colors,
   categoryColors,
   defaultCategoryColor,
 } from '../config/siteConfig';
+
+const resolveImageUri = (url?: string) =>
+  url?.startsWith('/') ? `${API_BASE}${url}` : url;
 
 type DetailParams = {
   Detail: { listing: FormattedListing };
@@ -91,7 +95,7 @@ export default function DetailScreen() {
       >
         {/* Hero */}
         {listing.image_url ? (
-          <Image source={{ uri: listing.image_url }} style={styles.heroImage} />
+          <Image source={{ uri: resolveImageUri(listing.image_url) }} style={styles.heroImage} />
         ) : (
           <View style={[styles.heroPlaceholder, { backgroundColor: accentColor }]}>
             <Ionicons name="business-outline" size={48} color="rgba(255,255,255,0.6)" />
@@ -200,6 +204,28 @@ export default function DetailScreen() {
           <CollapsibleSection title="ADA / Accessibility" content={listing.ada_accessibility_notes} />
           <CollapsibleSection title="Transit Instructions" content={listing.transit_instructions} />
           <CollapsibleSection title="Building Description" content={listing.building_description} />
+
+          {/* Inside the building (multi-office buildings) */}
+          {(listing.office_entrance_image_url || listing.internal_directions) && (
+            <View style={styles.infoSection}>
+              <View style={styles.infoHeader}>
+                <Ionicons name="business-outline" size={16} color={colors.navy} />
+                <Text style={styles.infoTitle}>Inside the Building</Text>
+              </View>
+              {listing.internal_directions && (
+                <Text style={styles.infoText}>{listing.internal_directions}</Text>
+              )}
+              {listing.office_entrance_image_url && (
+                <Image
+                  source={{ uri: resolveImageUri(listing.office_entrance_image_url) }}
+                  style={styles.officeEntranceImage}
+                  resizeMode="cover"
+                  accessible
+                  accessibilityLabel={`Photo of ${listing.full_name} office entrance`}
+                />
+              )}
+            </View>
+          )}
           <CollapsibleSection title="COVID-19 Message" content={listing.covid_message} />
 
           {/* Age info */}
@@ -454,5 +480,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.mediumGray,
     fontWeight: '500',
+  },
+  officeEntranceImage: {
+    width: '100%',
+    height: 180,
+    borderRadius: 8,
+    marginTop: 4,
   },
 });
